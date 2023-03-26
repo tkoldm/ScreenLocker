@@ -4,4 +4,6 @@ Simple solution for lock desktop with using telegram bot.
 
 For start your bot - pass your API key into appsettings.json "TelebotKey".
 
+For access to locker you need pass your telegram user id into appsettings.json param "UserId"
+
 To get an API key for your bot, you need to contact [BotFather](https://t.me/botfather)

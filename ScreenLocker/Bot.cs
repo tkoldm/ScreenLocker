@@ -9,15 +9,17 @@ namespace ScreenLocker;
 internal class Bot
 {
     private readonly ITelegramBotClient _botClient;
+    private readonly int _allowedUser;
     private readonly ReceiverOptions _options;
 
-    internal Bot(string apiKey)
+    internal Bot(string apiKey, int allowedUser)
     {
         _botClient = new TelegramBotClient(apiKey);
         _options = new()
         {
             AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
         };
+        _allowedUser = allowedUser;
     }
 
     internal void StartReceiving(CancellationToken cancellationToken)
@@ -40,8 +42,17 @@ internal class Bot
             return;
 
         var chatId = message.Chat.Id;
-
         Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
+
+        if (chatId != _allowedUser)
+        {
+            await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: "Доступ запрещен",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
 
         string responseMessage;
         if (messageText == "/lock")

@@ -14,13 +14,20 @@ if (!string.IsNullOrEmpty(envName))
 
 IConfiguration config = builder.Build();
 
-
 var apiKey = config["TelebotKey"]
              ?? throw new ArgumentNullException("apiKey", "Api key for telegram bot not found");
 
-var botClient = new Bot(apiKey);
+var allowedUser = config["UserId"] 
+                  ?? throw new ArgumentNullException("allowedUser", "User id is not found in appsettings.json");
 
-using CancellationTokenSource cts = new ();
+if (!int.TryParse(allowedUser, out var allowedUserId))
+{
+    throw new ArgumentException("User id is incorrect");
+}
+
+var botClient = new Bot(apiKey, allowedUserId);
+
+using CancellationTokenSource cts = new();
 
 botClient.StartReceiving(cts.Token);
 
@@ -30,4 +37,3 @@ var me = await botClient.GetMe();
 Console.WriteLine($"Start listening for @{me.Username}");
 Console.ReadLine();
 cts.Cancel();
-
