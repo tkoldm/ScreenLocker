@@ -2,6 +2,6 @@
 
 Simple solution for lock desktop with using telegram bot.
 
-For using your API key in telegram - set environment variable with name `TelebotKey`.
+For start your bot - pass your API key into appsettings.json "TelebotKey".
 
 To get an API key for your bot, you need to contact [BotFather](https://t.me/botfather)
