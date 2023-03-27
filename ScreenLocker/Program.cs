@@ -1,31 +1,21 @@
 ﻿using Microsoft.Extensions.Configuration;
 using ScreenLocker;
 
-var envName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-
 var builder = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-if (!string.IsNullOrEmpty(envName))
-{
-    builder.AddJsonFile($"appsettings.{envName}.json", optional: true, reloadOnChange: true);
-}
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 IConfiguration config = builder.Build();
 
-var apiKey = config["TelebotKey"]
-             ?? throw new ArgumentNullException("apiKey", "Api key for telegram bot not found");
+var settings = config.GetRequiredSection("TelegramSettings").Get<TelegramSettings>();
 
-var allowedUser = config["UserId"] 
-                  ?? throw new ArgumentNullException("allowedUser", "User id is not found in appsettings.json");
-
-if (!int.TryParse(allowedUser, out var allowedUserId))
+if (string.IsNullOrEmpty(settings?.TelebotKey) || settings.UserId == default)
 {
-    throw new ArgumentException("User id is incorrect");
+    throw new ArgumentException("Неверное значение для параметров ApiKey или UserId. Исправьте значения в appsettings.json");
 }
 
-var botClient = new Bot(apiKey, allowedUserId);
+var botClient = new Bot(settings);
 
 using CancellationTokenSource cts = new();
 

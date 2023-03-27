@@ -12,14 +12,14 @@ internal class Bot
     private readonly int _allowedUser;
     private readonly ReceiverOptions _options;
 
-    internal Bot(string apiKey, int allowedUser)
+    internal Bot(TelegramSettings telegramSettings)
     {
-        _botClient = new TelegramBotClient(apiKey);
+        _botClient = new TelegramBotClient(telegramSettings.TelebotKey);
         _options = new()
         {
             AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
         };
-        _allowedUser = allowedUser;
+        _allowedUser = telegramSettings.UserId;
     }
 
     internal void StartReceiving(CancellationToken cancellationToken)
