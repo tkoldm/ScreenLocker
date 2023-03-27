@@ -15,9 +15,12 @@ internal class Bot
     internal Bot(TelegramSettings telegramSettings)
     {
         _botClient = new TelegramBotClient(telegramSettings.TelebotKey);
-        _options = new()
+        _options = new ReceiverOptions
         {
-            AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
+            AllowedUpdates = new[]
+            {
+                UpdateType.Message
+            }
         };
         _allowedUser = telegramSettings.UserId;
     }
@@ -34,11 +37,10 @@ internal class Bot
 
     internal async Task<User> GetMe() => await _botClient.GetMeAsync();
 
-    async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
+        CancellationToken cancellationToken)
     {
-        if (update.Message is not { } message)
-            return;
-        if (message.Text is not { } messageText)
+        if (update.Message is not { Text: { } messageText } message)
             return;
 
         var chatId = message.Chat.Id;
@@ -53,16 +55,19 @@ internal class Bot
             return;
         }
 
-
         string responseMessage;
-        if (messageText == "/lock")
+        switch (messageText)
         {
-            responseMessage = "Экран заблокирован";
-            Locker.LockWorkStation();
-        }
-        else
-        {
-            responseMessage = "Неподдерживаемое сообщение";
+            case "/start":
+                responseMessage = "Привет! Этот бот блокирует экран вашего компьютера!\nДля блокировки выполните /lock";
+                break;
+            case "/lock":
+                responseMessage = "Экран заблокирован";
+                Locker.LockWorkStation();
+                break;
+            default:
+                responseMessage = "Неподдерживаемое сообщение";
+                break;
         }
 
         await botClient.SendTextMessageAsync(
@@ -71,16 +76,17 @@ internal class Bot
             cancellationToken: cancellationToken);
     }
 
-    Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+    private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception,
+        CancellationToken cancellationToken)
     {
-        var ErrorMessage = exception switch
+        var errorMessage = exception switch
         {
             ApiRequestException apiRequestException
                 => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
             _ => exception.ToString()
         };
 
-        Console.WriteLine(ErrorMessage);
+        Console.WriteLine(errorMessage);
         return Task.CompletedTask;
     }
 }
