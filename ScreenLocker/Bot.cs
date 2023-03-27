@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using ScreenLocker.ResponseMessage.Abstraction;
+using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -11,9 +12,11 @@ internal class Bot
     private readonly ITelegramBotClient _botClient;
     private readonly int _allowedUser;
     private readonly ReceiverOptions _options;
+    private readonly IResponseMessage _responseMessage;
 
-    internal Bot(TelegramSettings telegramSettings)
+    internal Bot(TelegramSettings telegramSettings, IResponseMessage responseMessage)
     {
+        _responseMessage = responseMessage;
         _botClient = new TelegramBotClient(telegramSettings.TelebotKey);
         _options = new ReceiverOptions
         {
@@ -44,13 +47,13 @@ internal class Bot
             return;
 
         var chatId = message.Chat.Id;
-        Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
+        Console.WriteLine(_responseMessage.IncomingRequestMessage(messageText, chatId));
 
         if (chatId != _allowedUser)
         {
             await botClient.SendTextMessageAsync(
                 chatId: chatId,
-                text: "Доступ запрещен",
+                text: _responseMessage.UserNotAllowedMessage(),
                 cancellationToken: cancellationToken);
             return;
         }
@@ -59,15 +62,21 @@ internal class Bot
         switch (messageText)
         {
             case "/start":
-                responseMessage = "Привет! Этот бот блокирует экран вашего компьютера!\nДля блокировки выполните /lock";
+            {
+                responseMessage = _responseMessage.StartMessage();
                 break;
+            }
             case "/lock":
-                responseMessage = "Экран заблокирован";
+            {
+                responseMessage = _responseMessage.ScreenLockedMessage();
                 Locker.LockWorkStation();
                 break;
+            }
             default:
-                responseMessage = "Неподдерживаемое сообщение";
+            {
+                responseMessage = _responseMessage.UnsupportedMessage();
                 break;
+            }
         }
 
         await botClient.SendTextMessageAsync(
@@ -76,13 +85,13 @@ internal class Bot
             cancellationToken: cancellationToken);
     }
 
-    private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception,
+    private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception,
         CancellationToken cancellationToken)
     {
         var errorMessage = exception switch
         {
             ApiRequestException apiRequestException
-                => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                => _responseMessage.ErrorMessage(apiRequestException.ErrorCode, apiRequestException.Message),
             _ => exception.ToString()
         };
 
